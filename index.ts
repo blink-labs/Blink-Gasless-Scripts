@@ -25,8 +25,33 @@ const createTransaction = async () => {
   return tx;
 };
 
+const isSponsorable = async (tx: Transaction) => {
+  const params = {
+    "jsonrpc": "2.0",
+    "method": "pm_isSponsorable", 
+    "params": [
+      {
+        "to": tx.to,
+        "from": wallet.address, 
+        "value": ethers.toQuantity(tx.value || 0),
+        "data": tx.data,
+        "gas": ethers.toQuantity(tx.gasLimit || 0)
+      }
+    ],
+    "id": 0
+  };
+  
+  return await provider.send("pm_isSponsorable", params.params);
+};
+
 async function main() {
   const tx = await createTransaction();
+  const isSponsorableResult = await isSponsorable(tx);
+  console.log("Is sponsorable:", isSponsorableResult.sponsorable);
+  if (!isSponsorableResult.sponsorable) {
+    console.log("Transaction is not sponsorable");
+    return;
+  }
 
   const signedTx = await wallet.signTransaction(tx);
   // console.log("Raw signed sponsored transaction: ", signedTx);

@@ -33,9 +33,9 @@ const isSponsorable = async (tx: Transaction) => {
       {
         "to": tx.to,
         "from": wallet.address, 
-        "value": ethers.toQuantity(tx.value || 0),
+        "value": ethers.toQuantity(tx.value),
         "data": tx.data,
-        "gas": ethers.toQuantity(tx.gasLimit || 0)
+        "gas": ethers.toQuantity(tx.gasLimit)
       }
     ],
     "id": 0

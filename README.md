@@ -1,5 +1,3 @@
-## Gas-sponsored swap tester
+# Helper scripts for Blink Gas Sponsored Swaps
 
-1. Copy the example .env file and add your Blink api key
-2. To install packages: `npm i`
-3. To run script: `npx tsx index.ts`
+You can use these scripts to test our gas sponsored swaps products on a number of chains. Select a folder to start.

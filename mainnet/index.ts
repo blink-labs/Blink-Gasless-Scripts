@@ -8,6 +8,7 @@ import {
   maxUint256,
   publicActions,
   Hex,
+  encodeFunctionData,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { mainnet } from "viem/chains";
@@ -123,13 +124,32 @@ const main = async () => {
   async function standardApproval(): Promise<any> {
     if (quote.issues.allowance !== null) {
       try {
-        const { request } = await usdc.simulate.approve([
-          quote.issues.allowance.spender,
-          maxUint256,
-        ]);
-        console.log("Approving AllowanceHolder to spend USDC...", request);
-        // set approval
-        const hash = await usdc.write.approve(request.args);
+        // Encode the approve function call
+        const approvalData = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [quote.issues.allowance.spender, maxUint256],
+        });
+        
+        console.log("Approving AllowanceHolder to spend USDC...");
+        
+        const gasPrice = await client.getGasPrice();
+        const priorityFee = 100000000n;
+        console.log("gasPrice", gasPrice);
+        
+        // Create approval transaction params
+        const approvalTxParams = {
+          to: usdc.address,
+          data: approvalData,
+          gas: 60000n,
+          maxFeePerGas: gasPrice + priorityFee,
+          maxPriorityFeePerGas: priorityFee,
+          account: client.account,
+          chain: client.chain,
+        };
+        
+        // Sign and send the approval transaction
+        const hash = await client.sendTransaction(approvalTxParams);
         console.log(
           "Approved AllowanceHolder to spend USDC.",
           await client.waitForTransactionReceipt({ hash })

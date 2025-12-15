@@ -11,7 +11,7 @@ import {
   encodeFunctionData,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { mainnet } from "viem/chains";
+import { bsc } from "viem/chains";
 import { wethAbi } from "./abi/weth-abi";
 
 // load env vars
@@ -35,19 +35,19 @@ const headers = new Headers({
 // setup wallet client
 const client = createWalletClient({
   account: privateKeyToAccount(("0x" + PRIVATE_KEY) as `0x${string}`),
-  chain: mainnet,
+  chain: bsc,
   transport: http(BLINK_URL + "?sponsorship=true"),
 }).extend(publicActions); // extend wallet client with publicActions for public client
 
 // set up contracts
-const usdc = getContract({
-  address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 on base
+const usdToken = getContract({
+  address: "0x55d398326f99059fF775485246999027B3197955",
   abi: erc20Abi,
   client,
 });
 
 const weth = getContract({
-  address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // 0x4200000000000000000000000000000000000006 on base
+  address: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", 
   abi: wethAbi,
   client,
 });
@@ -69,12 +69,12 @@ async function fetchJsonOrThrow(res: Response) {
 const main = async () => {
   // specify sell amount
   // USDC supports gasless approvals because it is an ERC-20 that supports the Permit function
-  const sellAmount = parseUnits("100", await usdc.read.decimals());
+  const sellAmount = parseUnits("100", await usdToken.read.decimals());
 
   // 1. fetch price
   const priceParams = new URLSearchParams({
     chainId: client.chain.id.toString(),
-    sellToken: usdc.address,
+    sellToken: usdToken.address,
     buyToken: weth.address,
     sellAmount: sellAmount.toString(),
     taker: client.account.address,
@@ -84,7 +84,7 @@ const main = async () => {
   const priceResponse = await fetch(priceUrl, { headers });
   const price = await fetchJsonOrThrow(priceResponse);
 
-  console.log("Fetching price to swap 0.1 USDC for WETH with Swap API (AllowanceHolder)\n");
+  console.log("Fetching price to swap 0.1 USD for WBNB with Swap API (AllowanceHolder)\n");
   console.log(priceUrl + "\n");
   console.log("🏷 priceResponse: ", price, "\n");
 
@@ -97,7 +97,7 @@ const main = async () => {
   const quoteResponse = await fetch(quoteUrl, { headers });
   const quote = await fetchJsonOrThrow(quoteResponse);
 
-  console.log("Fetching quote to swap 0.1 USDC for WETH with Swap API (AllowanceHolder)\n");
+  console.log("Fetching quote to swap 0.1 USD for WBNB with Swap API (AllowanceHolder)\n");
   console.log("💸 quoteResponse: ", quote, "\n");
 
   // 3. Check if token approval is required
@@ -133,17 +133,13 @@ const main = async () => {
         
         console.log("Approving AllowanceHolder to spend USDC...");
         
-        const gasPrice = await client.getGasPrice();
-        const priorityFee = 100000000n;
-        console.log("gasPrice", gasPrice);
-        
         // Create approval transaction params
         const approvalTxParams = {
-          to: usdc.address,
+          to: usdToken.address,
           data: approvalData,
           gas: 60000n,
-          maxFeePerGas: gasPrice + priorityFee,
-          maxPriorityFeePerGas: priorityFee,
+          maxFeePerGas: 0n,
+          maxPriorityFeePerGas: 0n,
           account: client.account,
           chain: client.chain,
         };
@@ -181,7 +177,7 @@ const main = async () => {
         data: transaction.data as `0x${string}`,
         value: BigInt(transaction.value || 0),
         gas: BigInt(transaction.gas),
-        gasPrice: transaction.gasPrice ? BigInt(transaction.gasPrice) : undefined,
+        gasPrice: 0n,
         account: client.account,
         chain: client.chain,
       }

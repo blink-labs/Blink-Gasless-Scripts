@@ -25,121 +25,6 @@ if (!ZERO_EX_API_KEY) throw new Error("missing ZERO_EX_API_KEY.");
 if (!BLINK_URL)
   throw new Error("missing BLINK_URL.");
 
-// fetch headers (shared)
-const headers = new Headers({
-  "Content-Type": "application/json",
-  "0x-api-key": ZERO_EX_API_KEY!,
-  "0x-version": "v2",
-});
-
-// setup wallet client
-const account = privateKeyToAccount(("0x" + PRIVATE_KEY) as `0x${string}`);
-
-const client = createWalletClient({
-  account,
-  chain: mainnet,
-  transport: http(BLINK_URL + "?sponsorship=true"),
-}).extend(publicActions); // extend wallet client with publicActions for public client
-
-// set up contracts
-const usdc = getContract({
-  address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 on base
-  abi: erc20Abi,
-  client,
-});
-
-const weth = getContract({
-  address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // 0x4200000000000000000000000000000000000006 on base
-  abi: wethAbi,
-  client,
-});
-
-// Small helper to safely parse JSON (and surface non-JSON errors)
-async function fetchJsonOrThrow(res: Response) {
-  const ct = res.headers.get("content-type") || "";
-  if (!res.ok || !ct.includes("application/json")) {
-    const bodyText = await res.text().catch(() => "<unreadable body>");
-    throw new Error(
-      `HTTP ${res.status} ${res.statusText}\n` +
-        `Content-Type: ${ct}\n` +
-        `Body:\n${bodyText}`
-    );
-  }
-  return res.json();
-}
-
-// Type for sponsorable params
-type IsSponsorableParams = {
-  to: string;
-  from: string;
-  value: string;
-  data: string;
-  gas: string;
-}
-
-// Batched pm_isSponsorable check for multiple transactions
-const batchIsSponsorable = async (txParamsArray: IsSponsorableParams[]): Promise<boolean[]> => {
-  const batchRequest = txParamsArray.map((params, index) => ({
-    jsonrpc: "2.0",
-    method: "pm_isSponsorable",
-    params: [params],
-    id: index,
-  }));
-
-  console.log("Batched pm_isSponsorable request:", JSON.stringify(batchRequest, null, 2));
-
-  const response = await fetch(BLINK_URL!, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(batchRequest),
-  });
-
-  const results = await response.json();
-  console.log("Batched pm_isSponsorable response:", JSON.stringify(results, null, 2));
-
-  // Sort by id to ensure correct order
-  const sortedResults = Array.isArray(results)
-    ? results.sort((a: any, b: any) => a.id - b.id)
-    : [results];
-
-  return sortedResults.map((result: any) => result.result?.sponsorable ?? false);
-};
-
-// Batched eth_sendRawTransaction for multiple signed transactions
-const batchSendRawTransactions = async (signedTxs: Hex[]): Promise<{ hash: Hex | null; error: any }[]> => {
-  const batchRequest = signedTxs.map((signedTx, index) => ({
-    jsonrpc: "2.0",
-    method: "eth_sendRawTransaction",
-    params: [signedTx],
-    id: index,
-  }));
-
-  console.log("Batched eth_sendRawTransaction request with", signedTxs.length, "transactions");
-
-  const response = await fetch(BLINK_URL! + "?sponsorship=true", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(batchRequest),
-  });
-
-  const results = await response.json();
-  console.log("Batched eth_sendRawTransaction response:", JSON.stringify(results, null, 2));
-
-  // Sort by id to ensure correct order
-  const sortedResults = Array.isArray(results)
-    ? results.sort((a: any, b: any) => a.id - b.id)
-    : [results];
-
-  return sortedResults.map((result: any) => ({
-    hash: result.result ?? null,
-    error: result.error ?? null,
-  }));
-};
-
 const main = async () => {
   // specify sell amount
   // USDC supports gasless approvals because it is an ERC-20 that supports the Permit function
@@ -394,5 +279,121 @@ const main = async () => {
     }
   }
 };
+
+// fetch headers (shared)
+const headers = new Headers({
+  "Content-Type": "application/json",
+  "0x-api-key": ZERO_EX_API_KEY!,
+  "0x-version": "v2",
+});
+
+// setup wallet client
+const account = privateKeyToAccount(("0x" + PRIVATE_KEY) as `0x${string}`);
+
+const client = createWalletClient({
+  account,
+  chain: mainnet,
+  transport: http(BLINK_URL + "?sponsorship=true"),
+}).extend(publicActions); // extend wallet client with publicActions for public client
+
+// set up contracts
+const usdc = getContract({
+  address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 on base
+  abi: erc20Abi,
+  client,
+});
+
+const weth = getContract({
+  address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // 0x4200000000000000000000000000000000000006 on base
+  abi: wethAbi,
+  client,
+});
+
+// Small helper to safely parse JSON (and surface non-JSON errors)
+async function fetchJsonOrThrow(res: Response) {
+  const ct = res.headers.get("content-type") || "";
+  if (!res.ok || !ct.includes("application/json")) {
+    const bodyText = await res.text().catch(() => "<unreadable body>");
+    throw new Error(
+      `HTTP ${res.status} ${res.statusText}\n` +
+        `Content-Type: ${ct}\n` +
+        `Body:\n${bodyText}`
+    );
+  }
+  return res.json();
+}
+
+// Type for sponsorable params
+type IsSponsorableParams = {
+  to: string;
+  from: string;
+  value: string;
+  data: string;
+  gas: string;
+}
+
+// Batched pm_isSponsorable check for multiple transactions
+const batchIsSponsorable = async (txParamsArray: IsSponsorableParams[]): Promise<boolean[]> => {
+  const batchRequest = txParamsArray.map((params, index) => ({
+    jsonrpc: "2.0",
+    method: "pm_isSponsorable",
+    params: [params],
+    id: index,
+  }));
+
+  console.log("Batched pm_isSponsorable request:", JSON.stringify(batchRequest, null, 2));
+
+  const response = await fetch(BLINK_URL!, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(batchRequest),
+  });
+
+  const results = await response.json();
+  console.log("Batched pm_isSponsorable response:", JSON.stringify(results, null, 2));
+
+  // Sort by id to ensure correct order
+  const sortedResults = Array.isArray(results)
+    ? results.sort((a: any, b: any) => a.id - b.id)
+    : [results];
+
+  return sortedResults.map((result: any) => result.result?.sponsorable ?? false);
+};
+
+// Batched eth_sendRawTransaction for multiple signed transactions
+const batchSendRawTransactions = async (signedTxs: Hex[]): Promise<{ hash: Hex | null; error: any }[]> => {
+  const batchRequest = signedTxs.map((signedTx, index) => ({
+    jsonrpc: "2.0",
+    method: "eth_sendRawTransaction",
+    params: [signedTx],
+    id: index,
+  }));
+
+  console.log("Batched eth_sendRawTransaction request with", signedTxs.length, "transactions");
+
+  const response = await fetch(BLINK_URL! + "?sponsorship=true", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(batchRequest),
+  });
+
+  const results = await response.json();
+  console.log("Batched eth_sendRawTransaction response:", JSON.stringify(results, null, 2));
+
+  // Sort by id to ensure correct order
+  const sortedResults = Array.isArray(results)
+    ? results.sort((a: any, b: any) => a.id - b.id)
+    : [results];
+
+  return sortedResults.map((result: any) => ({
+    hash: result.result ?? null,
+    error: result.error ?? null,
+  }));
+};
+
 
 main();

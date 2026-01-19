@@ -143,7 +143,7 @@ const batchSendRawTransactions = async (signedTxs: Hex[]): Promise<{ hash: Hex |
 const main = async () => {
   // specify sell amount
   // USDC supports gasless approvals because it is an ERC-20 that supports the Permit function
-  const sellAmount = parseUnits("100", await usdc.read.decimals());
+  const sellAmount = parseUnits("80", await usdc.read.decimals());
 
   // 1. fetch price
   const priceParams = new URLSearchParams({

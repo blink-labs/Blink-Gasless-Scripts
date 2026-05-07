@@ -20,10 +20,7 @@ if (mode !== "passive" && mode !== "active") {
 }
 const sponsorshipParam = mode === "active" ? "active" : "true";
 
-// const rpcUrl = `https://sol.blinklabs.xyz/v1/${API_KEY}?sponsorship=${sponsorshipParam}`;
-// const rpcUrlLocal = `http://localhost:3000/v1/${API_KEY}?sponsorship=${sponsorshipParam}`;
-const rpcUrl = `https://sol.blinklabs.xyz/v1/${API_KEY}`;
-const rpcUrlLocal = `http://localhost:3000/v1/${API_KEY}`;
+const rpcUrl = `https://sol.blinklabs.xyz/v1/${API_KEY}?sponsorship=${sponsorshipParam}`;
 const connection = new Connection(rpcUrl);
 
 const keypair = Keypair.generate();
@@ -49,7 +46,7 @@ const createTransaction = async () => {
 };
 
 const rpcCall = async (method: string, params: any[]) => {
-  const response = await fetch(rpcUrlLocal, {
+  const response = await fetch(rpcUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", method, params, id: 0 }),
